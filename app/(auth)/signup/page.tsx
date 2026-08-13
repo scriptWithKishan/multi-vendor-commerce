@@ -141,6 +141,27 @@ export default function SignupPage() {
               />
             </Field>
 
+            <Field>
+              <FieldLabel>Account Type</FieldLabel>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <Button
+                  type="button"
+                  variant={role === "customer" ? "default" : "outline"}
+                  className="w-full h-10 text-xs sm:text-sm"
+                  onClick={() => setRole("customer")}
+                >
+                  Customer
+                </Button>
+                <Button
+                  type="button"
+                  variant={role === "vendor" ? "default" : "outline"}
+                  className="w-full h-10 text-xs sm:text-sm"
+                  onClick={() => setRole("vendor")}
+                >
+                  Vendor / Seller
+                </Button>
+              </div>
+            </Field>
           </FieldGroup>
 
           <Button type="submit" className="w-full py-5 font-medium" disabled={loading}>
