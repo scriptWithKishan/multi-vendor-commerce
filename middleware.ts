@@ -5,8 +5,8 @@ export function middleware(req: NextRequest) {
   const hostname = req.headers.get("host") || "";
 
   // Configured root domain from environment (e.g. domainname.com or myproject.com:3000)
-  const envRoot = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "domainname.com").toLowerCase();
-  const rootDomain = envRoot.split(":")[0];
+  const envRoot = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "").toLowerCase();
+  const rootDomain = envRoot.split(":")[0].replace(/^www\./, "");
 
   // Clean host (strip port number if present)
   const currentHost = hostname.split(":")[0].toLowerCase();
@@ -21,6 +21,12 @@ export function middleware(req: NextRequest) {
   } else if (rootDomain && currentHost.endsWith(`.${rootDomain}`)) {
     // Production / Configured root domain matching (e.g. apex.domainname.com)
     subdomain = currentHost.replace(`.${rootDomain}`, "");
+  } else {
+    // General fallback for multi-part hostnames (e.g. apex.my-app.vercel.app or apex.customdomain.org)
+    const parts = currentHost.split(".");
+    if (parts.length >= 3 && parts[0] !== "www") {
+      subdomain = parts[0];
+    }
   }
 
   // If a valid subdomain exists (not www), rewrite internally to /store/[subdomain]

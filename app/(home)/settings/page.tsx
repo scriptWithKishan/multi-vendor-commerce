@@ -67,8 +67,11 @@ export default function SettingsPage() {
   const [vendorError, setVendorError] = useState<string | null>(null);
   const [vendorLoading, setVendorLoading] = useState(false);
 
-  // Dynamic Subdomain Regex Formatting
+  // Dynamic Subdomain Regex Formatting & Root Domain
   const shopSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  const displayRootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "domainname.com")
+    .split(":")[0]
+    .replace(/^www\./, "");
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -362,7 +365,7 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground mt-1.5 font-medium">
                           Store Subdomain Preview:{" "}
                           <span className="font-mono text-primary font-semibold">
-                            https://{shopSlug || "yourstore"}.domainname.com
+                            https://{shopSlug || "yourstore"}.{displayRootDomain}
                           </span>
                         </p>
                       </Field>

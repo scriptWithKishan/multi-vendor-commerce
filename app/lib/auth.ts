@@ -33,6 +33,15 @@ declare module "next-auth/jwt" {
   }
 }
 
+// Extract root domain for wildcard cookie domain sharing across subdomains (.domainname.com)
+const rawRootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "";
+const cleanRootDomain = rawRootDomain.split(":")[0].replace(/^www\./, "").toLowerCase();
+const isLocalDomain = !cleanRootDomain || cleanRootDomain === "localhost" || cleanRootDomain === "127.0.0.1";
+const cookieDomain = isLocalDomain ? undefined : `.${cleanRootDomain}`;
+
+const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+
 export const authOptions: AuthOptions = {
   providers: [
     GoogleProvider({
@@ -84,6 +93,18 @@ export const authOptions: AuthOptions = {
   },
   jwt: {
     maxAge: 7 * 24 * 60 * 60, // 7 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `${cookiePrefix}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+        domain: cookieDomain,
+      },
+    },
   },
   pages: {
     signIn: "/login",
