@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import {
   Card,
@@ -22,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +35,24 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Login API logic call can be integrated here
-      console.log("Logging in with credentials:", { email, password });
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        setError(res.error);
+      } else if (res?.ok) {
+        router.push("/");
+        router.refresh();
+      }
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err?.message || "Failed to log in. Please try again.");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to sign in. Please check your credentials.");
+      }
     } finally {
       setLoading(false);
     }
@@ -45,8 +61,8 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       await signIn("google", { callbackUrl: "/" });
-    } catch (err: unknown) {
-      if (err instanceof Error) setError("Failed to initiate Google login");
+    } catch {
+      setError("Failed to initiate Google login");
     }
   };
 
