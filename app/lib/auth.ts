@@ -1,5 +1,7 @@
 import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import dbConnect from "@/app/lib/mongodb";
 import User from "@/app/models/User";
 
@@ -37,13 +39,51 @@ export const authOptions: AuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Please enter an email and password");
+        }
+
+        await dbConnect();
+        const user = await User.findOne({ email: credentials.email.toLowerCase() }).select("+password");
+
+        if (!user) {
+          throw new Error("No user found with this email address");
+        }
+
+        if (!user.password) {
+          throw new Error("This account was registered via Google OAuth. Please sign in with Google.");
+        }
+
+        const isPasswordMatch = await bcrypt.compare(credentials.password, user.password);
+
+        if (!isPasswordMatch) {
+          throw new Error("Invalid password");
+        }
+
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          image: user.image || "",
+          role: user.role,
+          provider: user.provider,
+        };
+      },
+    }),
   ],
   session: {
     strategy: "jwt",
-    maxAge: 7 * 24 * 60 * 60, // 7 days (604,800 seconds)
+    maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   jwt: {
-    maxAge: 7 * 24 * 60 * 60, // 7 days (604,800 seconds)
+    maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   pages: {
     signIn: "/login",
@@ -59,7 +99,6 @@ export const authOptions: AuthOptions = {
           const existingUser = await User.findOne({ email: user.email });
 
           if (existingUser) {
-            // Update user if googleId is not linked yet
             if (!existingUser.googleId) {
               existingUser.googleId = account.providerAccountId;
               existingUser.provider =
@@ -70,7 +109,6 @@ export const authOptions: AuthOptions = {
               await existingUser.save();
             }
           } else {
-            // Create new Google user
             await User.create({
               name: user.name || "Google User",
               email: user.email,
@@ -90,8 +128,15 @@ export const authOptions: AuthOptions = {
       return true;
     },
 
-    async jwt({ token, user, account }) {
-      if ((user || account) && token.email) {
+    async jwt({ token, user, trigger, session }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        token.provider = user.provider;
+      } else if (trigger === "update" && session) {
+        if (session.name) token.name = session.name;
+        if (session.role) token.role = session.role;
+      } else if (token.email) {
         try {
           await dbConnect();
           const dbUser = await User.findOne({ email: token.email });
@@ -99,6 +144,7 @@ export const authOptions: AuthOptions = {
             token.id = dbUser._id.toString();
             token.role = dbUser.role;
             token.provider = dbUser.provider;
+            token.name = dbUser.name;
           }
         } catch (error) {
           console.error("Error fetching user for JWT token:", error);
@@ -111,7 +157,10 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = (token.id as string) || "";
         session.user.role = (token.role as string) || "customer";
-        session.user.provider = (token.provider as string) || "google";
+        session.user.provider = (token.provider as string) || "credentials";
+        if (token.name) {
+          session.user.name = token.name as string;
+        }
       }
       return session;
     },
