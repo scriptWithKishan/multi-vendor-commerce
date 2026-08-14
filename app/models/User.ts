@@ -1,5 +1,18 @@
 import mongoose, { Schema, Document, Model, models, model } from "mongoose";
 
+export interface IVendorStore {
+  shopName?: string;
+  subdomain?: string;
+  shopDescription?: string;
+  phoneNumber?: string;
+  storeAddress?: string;
+}
+
+export interface IOtp {
+  code?: string;
+  expiresAt?: Date;
+}
+
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
@@ -10,6 +23,8 @@ export interface IUser extends Document {
   googleId?: string;
   role: "customer" | "vendor" | "admin";
   isEmailVerified: boolean;
+  vendorStore?: IVendorStore;
+  otp?: IOtp;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,12 +77,29 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    vendorStore: {
+      shopName: { type: String, trim: true },
+      subdomain: { type: String, trim: true, lowercase: true, sparse: true },
+      shopDescription: { type: String, trim: true },
+      phoneNumber: { type: String, trim: true },
+      storeAddress: { type: String, trim: true },
+    },
+    otp: {
+      code: { type: String },
+      expiresAt: { type: Date },
+    },
   },
   {
     timestamps: true,
+    strict: true,
   }
 );
 
-const User: Model<IUser> = models.User || model<IUser>("User", UserSchema);
+// In Next.js development, delete model cache to ensure updated schema fields (otp, vendorStore) are always compiled.
+if (models.User) {
+  delete (models as Record<string, unknown>).User;
+}
+
+const User: Model<IUser> = model<IUser>("User", UserSchema);
 
 export default User;

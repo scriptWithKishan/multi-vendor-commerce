@@ -25,7 +25,6 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"customer" | "vendor">("customer");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -35,11 +34,30 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // Registration API logic call can be integrated here
-      console.log("Signing up with credentials:", { name, email, password, role });
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create account");
+      }
+
+      // Automatically sign in user after successful registration
+      await signIn("credentials", {
+        email,
+        password,
+        callbackUrl: "/",
+      });
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err?.message || "Failed to create account. Please try again.");
-    } finally {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to create account. Please try again.");
+      }
       setLoading(false);
     }
   };
@@ -47,8 +65,8 @@ export default function SignupPage() {
   const handleGoogleSignup = async () => {
     try {
       await signIn("google", { callbackUrl: "/" });
-    } catch (err: unknown) {
-      if (err instanceof Error) setError("Failed to initiate Google signup");
+    } catch {
+      setError("Failed to initiate Google signup");
     }
   };
 
@@ -139,28 +157,6 @@ export default function SignupPage() {
                 minLength={8}
                 autoComplete="new-password"
               />
-            </Field>
-
-            <Field>
-              <FieldLabel>Account Type</FieldLabel>
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <Button
-                  type="button"
-                  variant={role === "customer" ? "default" : "outline"}
-                  className="w-full h-10 text-xs sm:text-sm"
-                  onClick={() => setRole("customer")}
-                >
-                  Customer
-                </Button>
-                <Button
-                  type="button"
-                  variant={role === "vendor" ? "default" : "outline"}
-                  className="w-full h-10 text-xs sm:text-sm"
-                  onClick={() => setRole("vendor")}
-                >
-                  Vendor / Seller
-                </Button>
-              </div>
             </Field>
           </FieldGroup>
 
