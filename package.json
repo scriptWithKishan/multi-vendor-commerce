@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:categories": "bun scripts/seed-categories.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -2,12 +2,21 @@ import React from "react";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../lib/auth";
+import { redirect } from "next/navigation";
 
-export default function HomeLayout({
+export default async function HomeLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession(authOptions)
+
+  if (!session) {
+    redirect("/login");
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />

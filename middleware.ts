@@ -10,6 +10,7 @@ export function middleware(req: NextRequest) {
 
   // Clean host (strip port number if present)
   const currentHost = hostname.split(":")[0].toLowerCase();
+  const port = hostname.includes(":") ? `:${hostname.split(":")[1]}` : "";
 
   let subdomain: string | null = null;
 
@@ -29,8 +30,22 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // If a valid subdomain exists (not www), rewrite internally to /store/[subdomain]
+  // If a valid subdomain exists (not www)
   if (subdomain && subdomain !== "www") {
+    // Redirect auth pages (/login, /signup) on subdomains to the main marketplace domain
+    if (url.pathname === "/login" || url.pathname === "/signup") {
+      const isLocal = currentHost.includes("localhost") || currentHost.includes("127.0.0.1");
+      const mainProtocol = req.headers.get("x-forwarded-proto") || (isLocal ? "http" : "https");
+      const mainHost = isLocal
+        ? `localhost${port}`
+        : (rootDomain || "domainname.com");
+
+      return NextResponse.redirect(
+        new URL(`${url.pathname}${url.search}`, `${mainProtocol}://${mainHost}`)
+      );
+    }
+
+    // Rewrite all other subdomain requests internally to /store/[subdomain]
     return NextResponse.rewrite(
       new URL(`/store/${subdomain}${url.pathname}${url.search}`, req.url)
     );
